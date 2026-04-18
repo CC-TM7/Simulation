@@ -8,13 +8,13 @@
 ///   Oscillating – |P(t) - P*| stays flat  → neutral cobweb    (d/b ≈ 1)
 ///   Exploding   – |P(t) - P*| increases   → divergent cobweb  (d/b > 1)
 /// </summary>
-enum 50100 "Cycle Behavior Type"
+enum 50300 "Cycle Behavior Type"
 {
-    Extensible = true;
+    Extensible = false;
 
     value(0; " ")
     {
-        Caption = ' ';
+        Caption = ' ', Locked = true;
     }
     value(1; "Stable")
     {

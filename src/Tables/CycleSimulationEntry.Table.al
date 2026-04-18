@@ -8,7 +8,7 @@
 ///   Delta    = D(t) - S(t)            [excess demand; negative = excess supply]
 ///   BehaviorType – overall system classification (filled only on the last entry)
 /// </summary>
-table 50101 "Cycle Simulation Entry"
+table 50301 "Cycle Simulation Entry"
 {
     Caption = 'Cycle Simulation Entry';
     DataClassification = CustomerContent;
@@ -19,7 +19,7 @@ table 50101 "Cycle Simulation Entry"
         field(1; "Entry No."; Integer)
         {
             Caption = 'Entry No.';
-            DataClassification = CustomerContent;
+            DataClassification = SystemMetadata;
             AutoIncrement = true;
         }
 
@@ -28,6 +28,14 @@ table 50101 "Cycle Simulation Entry"
         {
             Caption = 'Time Step';
             DataClassification = CustomerContent;
+        }
+
+        /// <summary>Links this entry to the parent simulation run in "Cycle Simulation History".</summary>
+        field(3; "Simulation No."; Integer)
+        {
+            Caption = 'Simulation No.';
+            DataClassification = CustomerContent;
+            TableRelation = "Cycle Simulation History"."Simulation No.";
         }
 
         /// <summary>
@@ -94,7 +102,7 @@ table 50101 "Cycle Simulation Entry"
         field(30; "Created At"; DateTime)
         {
             Caption = 'Created At';
-            DataClassification = CustomerContent;
+            DataClassification = SystemMetadata;
         }
     }
 
@@ -105,6 +113,9 @@ table 50101 "Cycle Simulation Entry"
             Clustered = true;
         }
         key(TimeStep; "Time Step")
+        {
+        }
+        key(SimulationTimeStep; "Simulation No.", "Time Step")
         {
         }
     }

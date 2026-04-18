@@ -9,7 +9,7 @@
 ///   • Navigate to the results list
 ///   • Export results to Excel
 /// </summary>
-page 50100 "Cycle Simulation Setup"
+page 50300 "Cycle Simulation Setup"
 {
     Caption = 'Cycle Simulation Setup';
     PageType = Card;
@@ -32,6 +32,11 @@ page 50100 "Cycle Simulation Setup"
                     ApplicationArea = All;
                     Editable = false;
                     ToolTip = 'Identifies the setup record. Always DEFAULT.';
+                }
+                field("Item No."; Rec."Item No.")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Item whose ledger entries were used to auto-calculate the parameters. Blank if parameters are set manually.';
                 }
             }
 
@@ -134,10 +139,12 @@ page 50100 "Cycle Simulation Setup"
                 trigger OnAction()
                 var
                     SimEngine: Codeunit "Cycle Simulation Engine";
+                    SimCompletedQst: Label 'Simulation completed. Do you want to view the results?';
                 begin
                     CurrPage.SaveRecord();
                     SimEngine.RunSimulation();
-                    Message('Simulation completed. Open the Simulation Entries page to review results.');
+                    if Confirm(SimCompletedQst, true) then
+                        Page.Run(Page::"Cycle Simulation Entries");
                 end;
             }
 
@@ -153,8 +160,9 @@ page 50100 "Cycle Simulation Setup"
                 trigger OnAction()
                 var
                     SimEngine: Codeunit "Cycle Simulation Engine";
+                    ConfirmDeleteQst: Label 'Delete all simulation entries?';
                 begin
-                    if Confirm('Delete all simulation entries?', false) then
+                    if Confirm(ConfirmDeleteQst, false) then
                         SimEngine.ResetSimulation();
                 end;
             }
@@ -166,6 +174,17 @@ page 50100 "Cycle Simulation Setup"
                 ApplicationArea = All;
                 ToolTip = 'Opens the list of simulation entries.';
                 RunObject = page "Cycle Simulation Entries";
+                Promoted = true;
+                PromotedCategory = Process;
+            }
+
+            action(ShowHistory)
+            {
+                Caption = 'Show History';
+                Image = History;
+                ApplicationArea = All;
+                ToolTip = 'Opens the simulation history to view all past runs.';
+                RunObject = page "Cycle Simulation History";
                 Promoted = true;
                 PromotedCategory = Process;
             }
@@ -186,61 +205,52 @@ page 50100 "Cycle Simulation Setup"
                     SimEngine.ExportToExcelBuffer();
                 end;
             }
+
+            action(CalculateFromItem)
+            {
+                Caption = 'Calculate from Item';
+                Image = CalculateLines;
+                ApplicationArea = All;
+                ToolTip = 'Reads the selected item''s sales and purchase ledger entries (last 24 months) and calculates A, B, C, D, K, and Initial Price automatically.';
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedIsBig = true;
+
+                trigger OnAction()
+                var
+                    Item: Record Item;
+                    SimEngine: Codeunit "Cycle Simulation Engine";
+                begin
+                    if Page.RunModal(Page::"Item Lookup", Item) = Action::LookupOK then begin
+                        CurrPage.SaveRecord();
+                        SimEngine.CalculateFromItemLedger(Rec, Item."No.");
+                        CurrPage.Update(false);
+                    end;
+                end;
+            }
         }
     }
 
     trigger OnOpenPage()
-    var
-        Setup: Record "Cycle Simulation Setup";
     begin
-        // Ensure the singleton setup record exists before the page opens.
-        Setup := Setup.GetSetup();
-        if not Rec.Get(Setup.Code) then begin
-            Rec := Setup;
-            Rec.Insert();
-        end;
+        Rec.GetSetup(Rec);
     end;
 
     // ════════════════════════════════════════════════════════════════════════════
     //  Display helpers
     // ════════════════════════════════════════════════════════════════════════════
 
-    /// <summary>
-    /// Returns a formatted string showing the d/b ratio and its behavioral implication.
-    /// Displayed in the Stability Indicator group for immediate user feedback.
-    /// </summary>
     local procedure GetStabilityRatioText(): Text
     var
-        Ratio: Decimal;
+        SimEngine: Codeunit "Cycle Simulation Engine";
     begin
-        if Rec."Parameter B" = 0 then
-            exit('N/A (B = 0)');
-
-        Ratio := Rec."Parameter D" / Rec."Parameter B";
-
-        if Ratio < 0.95 then
-            exit(StrSubstNo('%1 → Stable (convergent)', Format(Ratio, 0, '<Precision,4><Standard Format,2>')))
-        else
-            if Ratio > 1.05 then
-                exit(StrSubstNo('%1 → Exploding (divergent)', Format(Ratio, 0, '<Precision,4><Standard Format,2>')))
-            else
-                exit(StrSubstNo('%1 → Oscillating (neutral)', Format(Ratio, 0, '<Precision,4><Standard Format,2>')));
+        exit(SimEngine.GetStabilityRatioText(Rec));
     end;
 
-    /// <summary>
-    /// Returns the theoretical equilibrium price P* = (A − C) / (B + D).
-    /// At equilibrium D(t) = S(t), so excess demand is zero and price stabilises.
-    /// </summary>
     local procedure GetEquilibriumPriceText(): Text
     var
-        Denominator: Decimal;
-        EquilPrice: Decimal;
+        SimEngine: Codeunit "Cycle Simulation Engine";
     begin
-        Denominator := Rec."Parameter B" + Rec."Parameter D";
-        if Denominator = 0 then
-            exit('N/A');
-
-        EquilPrice := (Rec."Parameter A" - Rec."Parameter C") / Denominator;
-        exit(Format(EquilPrice, 0, '<Precision,4><Standard Format,2>'));
+        exit(SimEngine.GetEquilibriumPriceText(Rec));
     end;
 }
