@@ -104,14 +104,97 @@ The simulation engine will emit a warning message if the price exceeds the safet
 
 ---
 
-## 5. How to Use
+## 5. Benutzer-Ablauf (User Workflow)
 
-1. Open **Cycle Simulation Setup** (search in Business Central).
-2. Adjust parameters as needed.
-3. Choose **Run Simulation** — results appear in the **Cycle Simulation Entries** list.
-4. The last entry shows the **Behavior Type** (Stable / Oscillating / Exploding).
-5. Use **Export to Excel** to download the time series for further analysis.
-6. Use **Reset Simulation** to clear all entries before a fresh run.
+### Schritt 1 — Setup öffnen
+
+In Business Central die Suchleiste (🔍) öffnen und nach **Cycle Simulation Setup** suchen.  
+Es öffnet sich eine **Card-Page** mit folgendem Aufbau:
+
+| Bereich | Was der User sieht | Was er tun kann |
+|---|---|---|
+| **General** | Feld `Code` = `DEFAULT` (nicht editierbar) | Nur lesen — identifiziert den einzigen Setup-Datensatz |
+| **Demand Function D(t) = A − B·P(t)** | Felder `Parameter A` und `Parameter B` | Nachfrage-Parameter anpassen (A = Achsenabschnitt, B = Steigung) |
+| **Supply Function S(t) = C + D·P(t−1)** | Felder `Parameter C` und `Parameter D` | Angebots-Parameter anpassen (C = Basis-Angebot, D = Preis-Reaktion) |
+| **Price Adjustment P(t+1) = P(t) + K·(D−S)** | Feld `Adjustment Factor K` | Geschwindigkeit der Preisanpassung einstellen |
+| **Simulation Control** | Felder `Initial Price` und `Number of Periods` | Startpreis P(0) und Anzahl Zeitschritte (2–1000) festlegen |
+| **Stability Indicator (d/b)** | Berechnete Anzeige: *Supply/Demand Slope Ratio* und *Equilibrium Price P\** | Nur lesen — zeigt sofort, ob das System stabil, oszillierend oder explodierend ist |
+
+> **Tipp:** Der Stabilitäts-Indikator aktualisiert sich live beim Ändern der Parameter, sodass man vor dem Start der Simulation das erwartete Verhalten ablesen kann.
+
+---
+
+### Schritt 2 — Simulation starten
+
+Im Aktionsmenü der Setup-Seite auf **Run Simulation** klicken.
+
+**Was passiert im Hintergrund:**
+1. Die aktuellen Parameter werden gespeichert.
+2. Alle bisherigen Simulationsergebnisse werden gelöscht.
+3. Die Engine berechnet für jeden Zeitschritt t = 0 … N−1 die Werte Preis, Nachfrage, Angebot und Delta.
+4. Nach Abschluss erscheint die Meldung: *„Simulation completed. Open the Simulation Entries page to review results."*
+
+> **Sicherheitshinweis:** Wenn der Preis den Schwellenwert von 1 × 10⁹ überschreitet (explodierende Simulation), bricht die Berechnung vorzeitig ab und zeigt eine Warnmeldung.
+
+---
+
+### Schritt 3 — Ergebnisse ansehen
+
+Auf der Setup-Seite **Show Entries** klicken (oder in der Suche **Cycle Simulation Entries** eingeben).  
+Es öffnet sich eine **List-Page** (schreibgeschützt) mit folgenden Spalten:
+
+| Spalte | Beschreibung |
+|---|---|
+| **Entry No.** | Eindeutige laufende Nummer |
+| **Time Step** | Zeitschritt t (0-basiert) — jede Zeile = eine Produktionsperiode |
+| **Price P(t)** | Marktpreis zum Zeitpunkt t |
+| **Demand D(t)** | Berechnete Nachfrage: A − B·P(t) |
+| **Supply S(t)** | Berechnetes Angebot: C + D·P(t−1) — reagiert auf den Preis der *Vorperiode* |
+| **Delta D(t)−S(t)** | Überschuss-Nachfrage (grün/positiv) oder Überschuss-Angebot (rot/negativ) |
+| **Behavior Type** | Nur in der letzten Zeile ausgefüllt: **Stable**, **Oscillating** oder **Exploding** |
+| **Created At** | Zeitstempel der Berechnung |
+
+**Farbcodierung der Delta-Spalte:**
+- 🟢 **Grün (Favorable):** Nachfrage > Angebot → Preis steigt in der nächsten Periode
+- 🔴 **Rot (Unfavorable):** Angebot > Nachfrage → Preis fällt in der nächsten Periode
+- ⚪ **Neutral (Standard):** Markt ist ausgeglichen (Delta = 0)
+
+---
+
+### Schritt 4 — Ergebnisse exportieren
+
+Auf **Export to Excel** klicken (verfügbar sowohl auf der Setup-Seite als auch in der Entries-Liste).  
+Es wird eine Excel-Datei `CobwebSimulation.xlsx` mit dem Arbeitsblatt *Results* generiert und automatisch zum Download angeboten.
+
+Die Excel-Datei enthält die Spalten: `Time Step | Price P(t) | Demand D(t) | Supply S(t) | Delta D-S | Behavior Type`
+
+---
+
+### Schritt 5 — Simulation zurücksetzen
+
+Auf **Reset Simulation** klicken → Bestätigungsdialog *„Delete all simulation entries?"* bestätigen.  
+Alle bisherigen Einträge werden gelöscht, damit eine neue Simulation mit geänderten Parametern sauber starten kann.
+
+---
+
+### Zusammenfassung: Typischer Ablauf
+
+```
+┌─────────────────────────┐
+│  Cycle Simulation Setup │
+│  (Card-Page)            │
+│                         │
+│  Parameter anpassen     │
+│  ↓                      │
+│  [Run Simulation]       │──→  Engine berechnet alle Zeitschritte
+│  ↓                      │
+│  [Show Entries]         │──→  Ergebnisliste anzeigen
+│  ↓                      │
+│  [Export to Excel]      │──→  Excel-Download
+│  ↓                      │
+│  [Reset Simulation]     │──→  Daten löschen, neu starten
+└─────────────────────────┘
+```
 
 ---
 

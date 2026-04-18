@@ -10,7 +10,7 @@
 ///
 /// Actions mirror those on the setup card for convenience.
 /// </summary>
-page 50101 "Cycle Simulation Entries"
+page 50301 "Cycle Simulation Entries"
 {
     Caption = 'Cycle Simulation Entries';
     PageType = List;
@@ -33,6 +33,11 @@ page 50101 "Cycle Simulation Entries"
                 {
                     ApplicationArea = All;
                     ToolTip = 'Unique record identifier (auto-incremented).';
+                }
+                field("Simulation No."; Rec."Simulation No.")
+                {
+                    ApplicationArea = All;
+                    ToolTip = 'Identifies which simulation run produced this entry.';
                 }
                 field("Time Step"; Rec."Time Step")
                 {
@@ -114,8 +119,9 @@ page 50101 "Cycle Simulation Entries"
                 trigger OnAction()
                 var
                     SimEngine: Codeunit "Cycle Simulation Engine";
+                    ConfirmDeleteQst: Label 'Delete all simulation entries?';
                 begin
-                    if Confirm('Delete all simulation entries?', false) then begin
+                    if Confirm(ConfirmDeleteQst, false) then begin
                         SimEngine.ResetSimulation();
                         CurrPage.Update(false);
                     end;
@@ -129,6 +135,17 @@ page 50101 "Cycle Simulation Entries"
                 ApplicationArea = All;
                 ToolTip = 'Opens the Cycle Simulation Setup card to adjust parameters.';
                 RunObject = page "Cycle Simulation Setup";
+                Promoted = true;
+                PromotedCategory = Process;
+            }
+
+            action(ShowHistory)
+            {
+                Caption = 'Show History';
+                Image = History;
+                ApplicationArea = All;
+                ToolTip = 'Opens the simulation history to view all past runs.';
+                RunObject = page "Cycle Simulation History";
                 Promoted = true;
                 PromotedCategory = Process;
             }

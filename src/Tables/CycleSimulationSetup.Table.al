@@ -11,7 +11,7 @@
 ///   InitialPrice – starting price  P(0)
 ///   NumPeriods   – how many time steps to simulate
 /// </summary>
-table 50100 "Cycle Simulation Setup"
+table 50300 "Cycle Simulation Setup"
 {
     Caption = 'Cycle Simulation Setup';
     DataClassification = CustomerContent;
@@ -34,12 +34,12 @@ table 50100 "Cycle Simulation Setup"
         {
             Caption = 'Parameter A (Demand Intercept)';
             DataClassification = CustomerContent;
-            MinValue = 0;
+            MinValue = 0.00001;
             DecimalPlaces = 0 : 5;
 
             trigger OnValidate()
             begin
-                Rec.ValidatePositive(Rec."Parameter A", FieldCaption("Parameter A"));
+                ValidatePositive(Rec."Parameter A", FieldCaption("Parameter A"));
             end;
         }
 
@@ -52,12 +52,12 @@ table 50100 "Cycle Simulation Setup"
         {
             Caption = 'Parameter B (Demand Slope)';
             DataClassification = CustomerContent;
-            MinValue = 0;
+            MinValue = 0.00001;
             DecimalPlaces = 0 : 5;
 
             trigger OnValidate()
             begin
-                Rec.ValidatePositive(Rec."Parameter B", FieldCaption("Parameter B"));
+                ValidatePositive(Rec."Parameter B", FieldCaption("Parameter B"));
             end;
         }
 
@@ -81,12 +81,12 @@ table 50100 "Cycle Simulation Setup"
         {
             Caption = 'Parameter D (Supply Slope)';
             DataClassification = CustomerContent;
-            MinValue = 0;
+            MinValue = 0.00001;
             DecimalPlaces = 0 : 5;
 
             trigger OnValidate()
             begin
-                Rec.ValidatePositive(Rec."Parameter D", FieldCaption("Parameter D"));
+                ValidatePositive(Rec."Parameter D", FieldCaption("Parameter D"));
             end;
         }
 
@@ -99,12 +99,12 @@ table 50100 "Cycle Simulation Setup"
         {
             Caption = 'Adjustment Factor K';
             DataClassification = CustomerContent;
-            MinValue = 0;
+            MinValue = 0.00001;
             DecimalPlaces = 0 : 5;
 
             trigger OnValidate()
             begin
-                Rec.ValidatePositive(Rec."Adjustment Factor K", FieldCaption("Adjustment Factor K"));
+                ValidatePositive(Rec."Adjustment Factor K", FieldCaption("Adjustment Factor K"));
             end;
         }
 
@@ -131,6 +131,17 @@ table 50100 "Cycle Simulation Setup"
             MinValue = 2;
             MaxValue = 1000;
         }
+
+        /// <summary>
+        /// Item No.: optional reference to a BC item whose ledger entries
+        /// were used to calculate the simulation parameters.
+        /// </summary>
+        field(30; "Item No."; Code[20])
+        {
+            Caption = 'Item No.';
+            DataClassification = CustomerContent;
+            TableRelation = Item."No.";
+        }
     }
 
     keys
@@ -142,13 +153,17 @@ table 50100 "Cycle Simulation Setup"
     }
 
     /// <summary>
-    /// Returns the singleton setup record, inserting defaults when not yet present.
+    /// Populates the singleton setup record, inserting defaults when not yet present.
     /// Callers should always use this method rather than Get() directly.
     /// </summary>
-    procedure GetSetup(): Record "Cycle Simulation Setup"
+    procedure GetSetup(var Setup: Record "Cycle Simulation Setup")
     var
-        Setup: Record "Cycle Simulation Setup";
+        IsHandled: Boolean;
     begin
+        OnBeforeGetSetup(Setup, IsHandled);
+        if IsHandled then
+            exit;
+
         if not Setup.Get('DEFAULT') then begin
             Setup.Init();
             Setup.Code := 'DEFAULT';
@@ -161,7 +176,8 @@ table 50100 "Cycle Simulation Setup"
             Setup."Number of Periods" := 30;
             Setup.Insert();
         end;
-        exit(Setup);
+
+        OnAfterGetSetup(Setup);
     end;
 
     /// <summary>
@@ -169,8 +185,20 @@ table 50100 "Cycle Simulation Setup"
     /// Used to enforce that slope and adjustment parameters remain meaningful.
     /// </summary>
     local procedure ValidatePositive(Value: Decimal; FieldName: Text)
+    var
+        FieldMustBePositiveErr: Label 'Field %1 must be greater than zero.', Comment = '%1 = field caption';
     begin
         if Value <= 0 then
-            Error('Field %1 must be greater than zero.', FieldName);
+            Error(FieldMustBePositiveErr, FieldName);
+    end;
+
+    [IntegrationEvent(false, false)]
+    local procedure OnBeforeGetSetup(var Setup: Record "Cycle Simulation Setup"; var IsHandled: Boolean)
+    begin
+    end;
+
+    [IntegrationEvent(false, false)]
+    local procedure OnAfterGetSetup(var Setup: Record "Cycle Simulation Setup")
+    begin
     end;
 }
