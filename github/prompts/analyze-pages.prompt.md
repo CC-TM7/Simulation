@@ -5,9 +5,9 @@ description: Page-Analyse auf Schwachstellen
 Lies die Coding-Guidelines und analysiere dann alle Pages und Page Extensions auf Schwachstellen:
 
 **Guidelines lesen:**
-#file:.github/instructions/al-code-style.instructions.md
-#file:.github/instructions/al-translations.instructions.md
-#file:.github/instructions/al-performance.instructions.md
+#file:../instructions/al-code-style.instructions.md
+#file:../instructions/al-translations.instructions.md
+#file:../instructions/al-performance.instructions.md
 
 **Pages analysieren:**
 - src/Pag51251.DemandChainSetup.al
@@ -38,3 +38,6 @@ Lies die Coding-Guidelines und analysiere dann alle Pages und Page Extensions au
 - 🟠 WARNUNG: Fehlende ToolTips, UX-Probleme
 - 🟡 VERBESSERUNG: Layout, Naming
 - 📊 Zusammenfassung mit Anzahl pro Kategorie
+
+**ToDos schreiben:**
+#file:./todo.prompt.md

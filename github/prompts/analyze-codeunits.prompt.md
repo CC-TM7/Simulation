@@ -75,7 +75,10 @@ Analysiere diese Codeunits im Workspace:
 - src/Cod51254.DemandChainTask.al
 
 Beziehe die Coding-Guidelines aus `.github/instructions/` ein:
-- #file:.github/instructions/al-error-handling.instructions.md
-- #file:.github/instructions/al-performance.instructions.md
-- #file:.github/instructions/al-code-style.instructions.md
-- #file:.github/instructions/al-naming-conventions.instructions.md
+- #file:../instructions/al-error-handling.instructions.md
+- #file:../instructions/al-performance.instructions.md
+- #file:../instructions/al-code-style.instructions.md
+- #file:../instructions/al-naming-conventions.instructions.md
+
+**ToDos schreiben:**
+#file:./todo.prompt.md

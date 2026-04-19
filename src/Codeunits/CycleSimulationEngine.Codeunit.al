@@ -418,8 +418,10 @@ codeunit 50300 "Cycle Simulation Engine"
     /// Item Ledger Entries for the given item, grouped by month.
     ///
     /// Approach (simple linear regression):
-    ///   1. Group Sales entries by month → (AvgPrice, TotalQty) per period → Demand curve
-    ///   2. Group Purchase entries by month → (AvgCost, TotalQty) per period → Supply curve
+    ///   1. Group demand entries (Sale, Consumption, Assembly Consumption) by month
+    ///      → (AvgPrice, TotalQty) per period → Demand curve
+    ///   2. Group supply entries (Purchase, Output, Assembly Output) by month
+    ///      → (AvgCost, TotalQty) per period → Supply curve
     ///   3. Linear regression Qty = A - B·Price  →  demand parameters A, B
     ///   4. Linear regression Qty = C + D·Price(t-1) →  supply parameters C, D
     ///   5. K estimated from average price change per unit excess demand
@@ -429,7 +431,6 @@ codeunit 50300 "Cycle Simulation Engine"
     var
         Item: Record Item;
         ItemLedgerEntry: Record "Item Ledger Entry";
-        TempPeriodBuffer: Record "Dimension Set Entry" temporary; // repurposed as period buffer
         // ── Demand regression accumulators ───────────────────────────────────────
         DemandN: Integer;
         DemandSumX: Decimal;   // ΣPrice
@@ -448,6 +449,7 @@ codeunit 50300 "Cycle Simulation Engine"
         PeriodQty: Decimal;
         PeriodCount: Integer;
         PeriodAmount: Decimal;
+        UnitAmount: Decimal;
         // ── Regression results ───────────────────────────────────────────────────
         Denominator: Decimal;
         CalcA: Decimal;
@@ -455,24 +457,27 @@ codeunit 50300 "Cycle Simulation Engine"
         CalcC: Decimal;
         CalcD: Decimal;
         // ── Error messages ───────────────────────────────────────────────────────
-        NoSalesDataErr: Label 'No item ledger entries with entry type Sale found for item %1 in the last 24 months.', Comment = '%1 = Item No.';
-        NoPurchaseDataErr: Label 'No item ledger entries with entry type Purchase found for item %1 in the last 24 months.', Comment = '%1 = Item No.';
-        InsufficientDataErr: Label 'At least 3 months of data are required for regression. Found: %1 sales months, %2 purchase months.', Comment = '%1 = Sales months, %2 = Purchase months';
+        NoDemandDataErr: Label 'No demand entries (Sale, Consumption, Assembly Consumption) found for item %1.', Comment = '%1 = Item No.';
+        NoSupplyDataErr: Label 'No supply entries (Purchase, Output, Assembly Output) found for item %1.', Comment = '%1 = Item No.';
+        InsufficientDataErr: Label 'At least 3 months of data are required for regression. Found: %1 demand months, %2 supply months.', Comment = '%1 = Demand months, %2 = Supply months';
         ParametersCalculatedMsg: Label 'Parameters calculated from item %1:\A = %2, B = %3, C = %4, D = %5, K = %6\Initial Price = %7', Comment = '%1 = Item No., %2..%7 = parameter values';
     begin
         Item.Get(ItemNo);
 
-        // ── Calculate Demand parameters from Sales ──────────────────────────────
+        // ── Calculate Demand parameters (Sale, Consumption, Assembly Consumption) ─
         DemandN := 0;
         ItemLedgerEntry.SetCurrentKey("Item No.", "Posting Date");
         ItemLedgerEntry.SetRange("Item No.", ItemNo);
-        //ItemLedgerEntry.SetRange("Entry Type", ItemLedgerEntry."Entry Type"::Sale);
-        ItemLedgerEntry.SetFilter("Posting Date", '..31.12.2028');
+        ItemLedgerEntry.SetFilter("Entry Type", '%1|%2|%3',
+            ItemLedgerEntry."Entry Type"::Sale,
+            ItemLedgerEntry."Entry Type"::Consumption,
+            ItemLedgerEntry."Entry Type"::"Assembly Consumption");
+        ItemLedgerEntry.SetFilter("Posting Date", '%1..', CalcDate('<-24M>', WorkDate()));
 
         if not ItemLedgerEntry.FindSet() then
-            Error(NoSalesDataErr, ItemNo);
+            Error(NoDemandDataErr, ItemNo);
 
-        if ItemLedgerEntry.FindFirst() then PeriodStart := ItemLedgerEntry."Posting Date";
+        PeriodStart := CalcDate('<-CM>', ItemLedgerEntry."Posting Date");
         PeriodQty := 0;
         PeriodAmount := 0;
         PeriodCount := 0;
@@ -495,7 +500,12 @@ codeunit 50300 "Cycle Simulation Engine"
             end;
             PeriodQty += Abs(ItemLedgerEntry.Quantity);
             if ItemLedgerEntry.Quantity <> 0 then begin
-                PeriodAmount += Abs(ItemLedgerEntry."Sales Amount (Actual)" / ItemLedgerEntry.Quantity);
+                // Sale → Sales Amount; Consumption/Assembly Consumption → Cost Amount
+                if ItemLedgerEntry."Entry Type" = ItemLedgerEntry."Entry Type"::Sale then
+                    UnitAmount := Abs(ItemLedgerEntry."Sales Amount (Actual)" / ItemLedgerEntry.Quantity)
+                else
+                    UnitAmount := Abs(ItemLedgerEntry."Cost Amount (Actual)" / ItemLedgerEntry.Quantity);
+                PeriodAmount += UnitAmount;
                 PeriodCount += 1;
             end;
         until ItemLedgerEntry.Next() = 0;
@@ -510,12 +520,15 @@ codeunit 50300 "Cycle Simulation Engine"
             DemandSumXY += PeriodPrice * Abs(PeriodQty);
         end;
 
-        // ── Calculate Supply parameters from Purchases ──────────────────────────
+        // ── Calculate Supply parameters (Purchase, Output, Assembly Output) ──────
         SupplyN := 0;
-        ItemLedgerEntry.SetRange("Entry Type", ItemLedgerEntry."Entry Type"::Purchase);
+        ItemLedgerEntry.SetFilter("Entry Type", '%1|%2|%3',
+            ItemLedgerEntry."Entry Type"::Purchase,
+            ItemLedgerEntry."Entry Type"::Output,
+            ItemLedgerEntry."Entry Type"::"Assembly Output");
 
         if not ItemLedgerEntry.FindSet() then
-            Error(NoPurchaseDataErr, ItemNo);
+            Error(NoSupplyDataErr, ItemNo);
 
         PeriodStart := CalcDate('<-CM>', ItemLedgerEntry."Posting Date");
         PeriodQty := 0;

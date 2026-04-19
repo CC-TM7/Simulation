@@ -5,10 +5,10 @@ description: Table-Analyse auf Schwachstellen
 Lies die Coding-Guidelines und analysiere dann alle Tables und Table Extensions auf Schwachstellen:
 
 **Guidelines lesen:**
-#file:.github/instructions/al-code-style.instructions.md
-#file:.github/instructions/al-translations.instructions.md
-#file:.github/instructions/al-performance.instructions.md
-#file:.github/instructions/al-events.instructions.md
+#file:../instructions/al-code-style.instructions.md
+#file:../instructions/al-translations.instructions.md
+#file:../instructions/al-performance.instructions.md
+#file:../instructions/al-events.instructions.md
 
 **Tables analysieren:**
 - src/Tab51251.DemandChainEntryBuffer.al
@@ -36,3 +36,6 @@ Lies die Coding-Guidelines und analysiere dann alle Tables und Table Extensions 
 - 🟠 WARNUNG: Fehlende Relations, zu viel Trigger-Logik
 - 🟡 VERBESSERUNG: Naming, Dokumentation
 - 📊 Zusammenfassung mit Anzahl pro Kategorie
+
+**ToDos schreiben:**
+#file:./todo.prompt.md
